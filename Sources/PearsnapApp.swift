@@ -48,7 +48,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, CaptureManagerDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "camera.viewfinder", accessibilityDescription: "Pearsnap")
+            button.title = "🍐"
         }
         
         updateMenu()

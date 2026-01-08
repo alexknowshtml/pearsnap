@@ -12,9 +12,8 @@ struct OnboardingView: View {
         VStack(spacing: 20) {
             // Header
             VStack(spacing: 8) {
-                Image(systemName: "camera.viewfinder")
-                    .font(.system(size: 48))
-                    .foregroundColor(.accentColor)
+                Text("🍐")
+                    .font(.system(size: 56))
                 
                 Text("Welcome to Pearsnap")
                     .font(.title)
@@ -23,7 +22,7 @@ struct OnboardingView: View {
                 Text("Quick screenshot capture & upload")
                     .foregroundColor(.secondary)
             }
-            .padding(.top, 20)
+            .padding(.top, 24)
             
             Divider()
                 .padding(.horizontal)
@@ -52,7 +51,6 @@ struct OnboardingView: View {
                     isGranted: screenRecordingGranted,
                     action: {
                         PermissionsManager.shared.requestScreenRecordingPermission()
-                        // Also open settings since the prompt might not appear
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                             PermissionsManager.shared.openScreenRecordingSettings()
                         }
@@ -92,9 +90,9 @@ struct OnboardingView: View {
                 }
             }
             .padding(.horizontal, 24)
-            .padding(.bottom, 20)
+            .padding(.bottom, 28)
         }
-        .frame(width: 380, height: 420)
+        .frame(width: 380, height: 440)
         .onAppear {
             startPolling()
         }
@@ -104,7 +102,6 @@ struct OnboardingView: View {
     }
     
     private func startPolling() {
-        // Poll for permission changes every second
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             accessibilityGranted = PermissionsManager.shared.hasAccessibilityPermission
             screenRecordingGranted = PermissionsManager.shared.hasScreenRecordingPermission
@@ -164,7 +161,7 @@ class OnboardingWindowController {
         })
         
         window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 380, height: 420),
+            contentRect: NSRect(x: 0, y: 0, width: 380, height: 440),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false

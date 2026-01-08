@@ -12,63 +12,77 @@ struct SettingsView: View {
     @State private var launchAtLogin: Bool = false
     
     var body: some View {
-        Form {
-            Section {
-                Toggle("Launch at Login", isOn: $launchAtLogin)
-                    .onChange(of: launchAtLogin) { newValue in
-                        setLaunchAtLogin(newValue)
+        VStack(spacing: 0) {
+            // Header
+            VStack(spacing: 4) {
+                Text("🍐")
+                    .font(.system(size: 40))
+                Text("Pearsnap")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                Text("Screenshot & Upload")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.top, 20)
+            .padding(.bottom, 16)
+            
+            Divider()
+            
+            ScrollView {
+                VStack(spacing: 20) {
+                    // General section
+                    SettingsSection(title: "General", icon: "gearshape") {
+                        Toggle("Launch at Login", isOn: $launchAtLogin)
+                            .onChange(of: launchAtLogin) { newValue in
+                                setLaunchAtLogin(newValue)
+                            }
                     }
-            } header: {
-                Text("General")
-            }
-            
-            Section {
-                TextField("Endpoint", text: $endpoint)
-                    .textFieldStyle(.roundedBorder)
-                    .help("e.g., nyc3.digitaloceanspaces.com")
-                
-                TextField("Bucket Name", text: $bucket)
-                    .textFieldStyle(.roundedBorder)
-                
-                TextField("Region", text: $region)
-                    .textFieldStyle(.roundedBorder)
-                    .help("e.g., nyc3")
-            } header: {
-                Text("S3 Configuration")
-            }
-            
-            Section {
-                TextField("Access Key", text: $accessKey)
-                    .textFieldStyle(.roundedBorder)
-                
-                SecureField("Secret Key", text: $secretKey)
-                    .textFieldStyle(.roundedBorder)
-            } header: {
-                Text("Credentials")
-            }
-            
-            Section {
-                TextField("Public URL Base", text: $publicURLBase)
-                    .textFieldStyle(.roundedBorder)
-                    .help("e.g., https://your-bucket.nyc3.cdn.digitaloceanspaces.com")
-            } header: {
-                Text("Public Access")
-            }
-            
-            HStack {
-                Spacer()
-                if showSaveConfirmation {
-                    Text("Saved!")
-                        .foregroundColor(.green)
+                    
+                    // S3 Configuration section
+                    SettingsSection(title: "Storage", icon: "cloud") {
+                        VStack(spacing: 12) {
+                            SettingsTextField(label: "Endpoint", text: $endpoint, placeholder: "nyc3.digitaloceanspaces.com")
+                            SettingsTextField(label: "Bucket", text: $bucket, placeholder: "my-bucket")
+                            SettingsTextField(label: "Region", text: $region, placeholder: "nyc3")
+                        }
+                    }
+                    
+                    // Credentials section
+                    SettingsSection(title: "Credentials", icon: "key") {
+                        VStack(spacing: 12) {
+                            SettingsTextField(label: "Access Key", text: $accessKey, placeholder: "Your access key")
+                            SettingsSecureField(label: "Secret Key", text: $secretKey, placeholder: "Your secret key")
+                        }
+                    }
+                    
+                    // Public URL section
+                    SettingsSection(title: "Public URL", icon: "link") {
+                        SettingsTextField(label: "URL Base", text: $publicURLBase, placeholder: "https://bucket.nyc3.cdn.digitaloceanspaces.com")
+                    }
                 }
-                Button("Save") {
-                    saveConfig()
+                .padding(20)
+            }
+            
+            Divider()
+            
+            // Footer with save button
+            HStack {
+                if showSaveConfirmation {
+                    Label("Saved", systemImage: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                        .font(.caption)
+                }
+                Spacer()
+                Button(action: saveConfig) {
+                    Text("Save Settings")
                 }
                 .buttonStyle(.borderedProminent)
+                .controlSize(.regular)
             }
+            .padding(16)
         }
-        .padding()
-        .frame(width: 400, height: 400)
+        .frame(width: 420, height: 520)
         .onAppear {
             loadConfig()
             loadLaunchAtLogin()
@@ -94,7 +108,6 @@ struct SettingsView: View {
         if #available(macOS 13.0, *) {
             launchAtLogin = SMAppService.mainApp.status == .enabled
         } else {
-            // For older macOS, check legacy method
             launchAtLogin = false
         }
     }
@@ -126,6 +139,63 @@ struct SettingsView: View {
         showSaveConfirmation = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             showSaveConfirmation = false
+        }
+    }
+}
+
+struct SettingsSection<Content: View>: View {
+    let title: String
+    let icon: String
+    let content: Content
+    
+    init(title: String, icon: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.icon = icon
+        self.content = content()
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label(title, systemImage: icon)
+                .font(.headline)
+                .foregroundColor(.primary)
+            
+            content
+                .padding(16)
+                .background(Color(nsColor: .controlBackgroundColor))
+                .cornerRadius(10)
+        }
+    }
+}
+
+struct SettingsTextField: View {
+    let label: String
+    @Binding var text: String
+    let placeholder: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.caption)
+                .foregroundColor(.secondary)
+            TextField(placeholder, text: $text)
+                .textFieldStyle(.roundedBorder)
+        }
+    }
+}
+
+struct SettingsSecureField: View {
+    let label: String
+    @Binding var text: String
+    let placeholder: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.caption)
+                .foregroundColor(.secondary)
+            SecureField(placeholder, text: $text)
+                .textFieldStyle(.roundedBorder)
         }
     }
 }
