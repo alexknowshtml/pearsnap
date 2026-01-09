@@ -156,7 +156,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, CaptureManagerDelegate {
             let commandShift: CGEventFlags = [.maskCommand, .maskShift]
             if keyCode == 23 && flags.contains(commandShift) {
                 DispatchQueue.main.async {
-                    self.captureScreenshot()
+                    self.toggleCapture()
                 }
                 return nil
             }
@@ -240,5 +240,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, CaptureManagerDelegate {
     
     @objc func quit() {
         NSApp.terminate(nil)
+    }
+}
+
+extension AppDelegate {
+    @objc func toggleCapture() {
+        // If recording video, stop it
+        if let manager = captureManager {
+            manager.stopVideoRecording()
+        }
+        // Otherwise start capture
+        captureScreenshot()
     }
 }
