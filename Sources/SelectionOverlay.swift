@@ -1,13 +1,7 @@
 import AppKit
-import ScreenCaptureKit
-
-enum CaptureMode {
-    case screenshot
-    case video
-}
 
 protocol SelectionOverlayDelegate: AnyObject {
-    func selectionOverlay(_ overlay: SelectionOverlay, didSelectRegion rect: CGRect, mode: CaptureMode, screen: NSScreen)
+    func selectionOverlay(_ overlay: SelectionOverlay, didSelectRegion rect: CGRect, screen: NSScreen)
     func selectionOverlayCancelled(_ overlay: SelectionOverlay)
 }
 
@@ -17,10 +11,9 @@ class SelectionOverlay: NSWindow {
     private var startPoint: NSPoint?
     private var currentPoint: NSPoint?
     private var selectionRect: CGRect?
-    private var captureMode: CaptureMode = .screenshot
     private var modeLabel: NSTextField!
     private var trackingArea: NSTrackingArea?
-    private var overlayScreen: NSScreen?
+    var overlayScreen: NSScreen?
     private var loupeView: LoupeView!
     private var screenSnapshot: CGImage?
     private var currentHexColor: String = "#FFFFFF"
@@ -78,19 +71,19 @@ class SelectionOverlay: NSWindow {
     }
     
     private func setupLabels() {
-        modeLabel = NSTextField(frame: NSRect(x: 0, y: 0, width: 280, height: 30))
+        modeLabel = NSTextField(frame: NSRect(x: 0, y: 0, width: 240, height: 30))
         modeLabel.isEditable = false
         modeLabel.isBordered = false
         modeLabel.backgroundColor = NSColor.black.withAlphaComponent(0.7)
         modeLabel.textColor = .white
         modeLabel.font = NSFont.systemFont(ofSize: 13, weight: .medium)
         modeLabel.alignment = .center
-        modeLabel.stringValue = "📷 Screenshot · V=video · ⌘C=copy color"
+        modeLabel.stringValue = "📷 Screenshot · ⌘C=copy color"
         modeLabel.wantsLayer = true
         modeLabel.layer?.cornerRadius = 6
         
         modeLabel.frame.origin = NSPoint(
-            x: frame.width / 2 - 140,
+            x: frame.width / 2 - 120,
             y: frame.height - 60
         )
         contentView?.addSubview(modeLabel)
@@ -125,10 +118,6 @@ class SelectionOverlay: NSWindow {
         case 53: // ESC
             close()
             selectionDelegate?.selectionOverlayCancelled(self)
-        case 9: // V key
-            if flags.isEmpty {
-                toggleMode()
-            }
         case 8: // C key
             if flags == .command {
                 copyColorToClipboard()
@@ -147,16 +136,6 @@ class SelectionOverlay: NSWindow {
         NSCursor.pop()
         close()
         selectionDelegate?.selectionOverlayCancelled(self)
-    }
-    
-    private func toggleMode() {
-        if captureMode == .screenshot {
-            captureMode = .video
-            modeLabel.stringValue = "🎬 Video · V=screenshot · ⌘C=copy color"
-        } else {
-            captureMode = .screenshot
-            modeLabel.stringValue = "📷 Screenshot · V=video · ⌘C=copy color"
-        }
     }
     
     override func mouseMoved(with event: NSEvent) {
@@ -276,7 +255,7 @@ class SelectionOverlay: NSWindow {
         NSCursor.pop()
         close()
         
-        selectionDelegate?.selectionOverlay(self, didSelectRegion: screenRect, mode: captureMode, screen: overlayScreen ?? NSScreen.main!)
+        selectionDelegate?.selectionOverlay(self, didSelectRegion: screenRect, screen: overlayScreen ?? NSScreen.main!)
     }
     
     private func updateSelectionRect() {

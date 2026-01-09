@@ -12,7 +12,6 @@ A lightweight macOS screenshot tool that captures, uploads, and shares in one fl
 - **Launch at Login**: Optional auto-start
 - **Color Picker**: Loupe magnifier shows pixel colors with hex codes
 - **Copy Hex**: Press ⌘C while hovering to copy the hex color to clipboard
-- **Video Mode** (experimental): Press V to toggle to video recording mode
 
 ## Keyboard Shortcuts
 
@@ -20,7 +19,6 @@ A lightweight macOS screenshot tool that captures, uploads, and shares in one fl
 |----------|--------|
 | ⌘⇧5 | Start capture |
 | ESC | Cancel capture / Close preview |
-| V | Toggle screenshot/video mode (during capture) |
 | ⌘C | Copy hex color under cursor (during capture) |
 
 ## Installation

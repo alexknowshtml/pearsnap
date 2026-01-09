@@ -243,13 +243,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, CaptureManagerDelegate {
     }
 }
 
+
 extension AppDelegate {
     @objc func toggleCapture() {
-        // If recording video, stop it
-        if let manager = captureManager {
-            manager.stopVideoRecording()
-        }
-        // Otherwise start capture
         captureScreenshot()
     }
 }
