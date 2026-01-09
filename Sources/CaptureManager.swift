@@ -21,6 +21,10 @@ class CaptureManager: NSObject, SelectionOverlayDelegate {
     }
     
     private func showSelectionOverlay() {
+        // Find screen with mouse
+        let mouseLocation = NSEvent.mouseLocation
+        let mouseScreen = NSScreen.screens.first { NSMouseInRect(mouseLocation, $0.frame, false) } ?? NSScreen.main
+        
         // Close any existing overlays
         selectionOverlays.forEach { $0.close() }
         selectionOverlays.removeAll()
@@ -29,11 +33,22 @@ class CaptureManager: NSObject, SelectionOverlayDelegate {
         for screen in NSScreen.screens {
             let overlay = SelectionOverlay(screen: screen)
             overlay.selectionDelegate = self
-            overlay.makeKeyAndOrderFront(nil)
+            
+            // Only make the overlay with the mouse the key window
+            if screen == mouseScreen {
+                overlay.makeKeyAndOrderFront(nil)
+            } else {
+                overlay.orderFront(nil)
+            }
             selectionOverlays.append(overlay)
         }
         
         NSApp.activate(ignoringOtherApps: true)
+        
+        // Ensure the correct overlay is key after activation
+        if let keyOverlay = selectionOverlays.first(where: { $0.screen == mouseScreen }) {
+            keyOverlay.makeKey()
+        }
     }
     
     // MARK: - SelectionOverlayDelegate

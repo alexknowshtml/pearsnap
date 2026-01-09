@@ -6,6 +6,9 @@ class PreviewWindow: NSWindow {
     private var statusLabel: NSTextField!
     private var imageView: DraggableImageView!
     
+    // Remember position within app session (resets on restart)
+    private static var rememberedOrigin: NSPoint?
+    
     init(image: NSImage, screen: NSScreen? = nil) {
         self.image = image
         
@@ -19,10 +22,16 @@ class PreviewWindow: NSWindow {
         let targetScreen = screen ?? NSScreen.main
         let screenFrame = targetScreen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? .zero
         
-        let windowOrigin = NSPoint(
-            x: screenFrame.midX - windowSize.width / 2,
-            y: screenFrame.midY - windowSize.height / 2
-        )
+        // Use remembered position or center on screen
+        let windowOrigin: NSPoint
+        if let remembered = PreviewWindow.rememberedOrigin {
+            windowOrigin = remembered
+        } else {
+            windowOrigin = NSPoint(
+                x: screenFrame.midX - windowSize.width / 2,
+                y: screenFrame.midY - windowSize.height / 2
+            )
+        }
         
         super.init(
             contentRect: NSRect(origin: windowOrigin, size: windowSize),
@@ -74,6 +83,9 @@ class PreviewWindow: NSWindow {
     }
     
     override func close() {
+        // Remember position before closing
+        PreviewWindow.rememberedOrigin = self.frame.origin
+        
         let closeCallback = onClose
         onClose = nil
         orderOut(nil)
