@@ -12,6 +12,7 @@ A lightweight macOS screenshot tool that captures, uploads, and shares in one fl
 - **Launch at Login**: Optional auto-start
 - **Color Picker**: Loupe magnifier shows pixel colors with hex codes
 - **Copy Hex**: Press ⌘C while hovering to copy the hex color to clipboard
+- **Auto-Updates**: Built-in Sparkle updater checks for new versions
 
 ## Keyboard Shortcuts
 
@@ -23,11 +24,18 @@ A lightweight macOS screenshot tool that captures, uploads, and shares in one fl
 
 ## Installation
 
-1. Clone this repository
-2. Build with Swift Package Manager
-3. Configure your S3 credentials in Settings
+### Download
 
-### Building
+Download the latest release from the [Releases page](https://github.com/alexknowshtml/pearsnap/releases).
+
+1. Download `Pearsnap-vX.X.X.zip`
+2. Extract and move `Pearsnap.app` to `/Applications`
+3. Launch and grant Accessibility + Screen Recording permissions when prompted
+4. Configure your S3 credentials in Settings
+
+**Note:** This is an unsigned build. You may need to right-click → Open the first time.
+
+### Building from Source
 
 ```bash
 ./build.sh  # Builds, signs, and deploys to /Applications
@@ -38,7 +46,10 @@ Or manually:
 ```bash
 swift build
 cp .build/debug/Pearsnap Pearsnap.app/Contents/MacOS/Pearsnap
-codesign --force --deep --sign "Apple Development: Your Name (XXXXXXXXXX)" Pearsnap.app
+mkdir -p Pearsnap.app/Contents/Frameworks
+cp -R .build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework Pearsnap.app/Contents/Frameworks/
+install_name_tool -add_rpath @executable_path/../Frameworks Pearsnap.app/Contents/MacOS/Pearsnap
+codesign --force --deep --sign - Pearsnap.app
 cp -R Pearsnap.app /Applications/
 ```
 
@@ -46,7 +57,6 @@ cp -R Pearsnap.app /Applications/
 
 - macOS 13.0 or later
 - S3-compatible storage (DigitalOcean Spaces, AWS S3, Backblaze B2, etc.)
-- Apple Developer certificate (for persistent permissions)
 
 ## Configuration
 
@@ -67,7 +77,35 @@ Pearsnap requires:
 - **Accessibility**: For global keyboard shortcut
 - **Screen Recording**: For capturing screenshots
 
-These permissions persist across rebuilds when using a Developer certificate for code signing.
+## Releasing New Versions
+
+To release a new version:
+
+```bash
+./release.sh 1.2.0
+```
+
+This single command will:
+1. Bump version in Info.plist
+2. Build the app with Sparkle framework
+3. Create and sign the release zip with EdDSA
+4. Create a GitHub release with the zip attached
+5. Update `docs/appcast.xml` with the new version
+6. Commit and push everything
+
+Users with Pearsnap installed can then click **Check for Updates...** in the menu to get the new version.
+
+### Manual Release Steps
+
+If you need to release manually:
+
+1. Update `CFBundleShortVersionString` and `CFBundleVersion` in `Pearsnap.app/Contents/Info.plist`
+2. Run `./build.sh`
+3. Create zip: `zip -r Pearsnap-vX.X.X.zip Pearsnap.app`
+4. Sign: `~/.build/artifacts/sparkle/Sparkle/bin/sign_update Pearsnap-vX.X.X.zip -f ~/Developer/Pearsnap/sparkle_private_key`
+5. Create GitHub release and attach the zip
+6. Add new `<item>` to `docs/appcast.xml` with the signature
+7. Push to main
 
 ## Why "Pearsnap"?
 
