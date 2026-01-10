@@ -17,9 +17,9 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
+    <string>1.0.1</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>2</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>
@@ -28,5 +28,9 @@
     <true/>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
+    <key>SUFeedURL</key>
+    <string>https://alexknowshtml.github.io/pearsnap/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>uI7LlK/o6RmhQNU6Ao8ylqKQQSiA80jY/4z7n/IHoX8=</string>
 </dict>
 </plist>

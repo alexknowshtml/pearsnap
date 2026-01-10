@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <channel>
+        <title>Pearsnap Updates</title>
+        <link>https://alexknowshtml.github.io/pearsnap/appcast.xml</link>
+        <description>Most recent updates to Pearsnap</description>
+        <language>en</language>
+        <item>
+            <title>Version 1.0.0</title>
+            <pubDate>Thu, 09 Jan 2026 10:00:00 -0500</pubDate>
+            <sparkle:version>1</sparkle:version>
+            <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+            <description><![CDATA[
+                <h2>Initial Release</h2>
+                <ul>
+                    <li>Global keyboard shortcut (⌘⇧5) for screen capture</li>
+                    <li>Drag-to-select region capture</li>
+                    <li>Fullscreen and window capture modes</li>
+                    <li>Auto-upload to DigitalOcean Spaces</li>
+                    <li>URL auto-copied to clipboard</li>
+                    <li>Upload history with thumbnails</li>
+                </ul>
+            ]]></description>
+            <enclosure url="https://github.com/alexknowshtml/pearsnap/releases/download/v1.0.0/Pearsnap-v1.0.0.zip"
+                       sparkle:edSignature=""
+                       length="606208"
+                       type="application/octet-stream"/>
+        </item>
+    </channel>
+</rss>

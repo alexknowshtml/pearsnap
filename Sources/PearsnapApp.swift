@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import Carbon.HIToolbox
+import Sparkle
 
 @main
 struct PearsnapApp: App {
@@ -21,6 +22,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, CaptureManagerDelegate {
     var onboardingController: OnboardingWindowController?
     var permissionCheckTimer: Timer?
     var historyPreviewWindow: PreviewWindow?
+    let updaterController: SPUStandardUpdaterController
+    
+    override init() {
+        updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+        super.init()
+    }
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -93,6 +100,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, CaptureManagerDelegate {
         }
         
         menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
+        menu.addItem(NSMenuItem(title: "Check for Updates...", action: #selector(checkForUpdates), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Check Permissions...", action: #selector(showPermissions), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit Pearsnap", action: #selector(quit), keyEquivalent: "q"))
@@ -249,6 +257,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, CaptureManagerDelegate {
         
         settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+    
+    @objc func checkForUpdates() {
+        updaterController.checkForUpdates(nil)
     }
     
     @objc func showPermissions() {
