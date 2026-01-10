@@ -58,12 +58,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, CaptureManagerDelegate {
         let menu = NSMenu()
         
         if PermissionsManager.shared.allPermissionsGranted {
-            menu.addItem(NSMenuItem(title: "Capture Screenshot (⌘⇧5)", action: #selector(captureScreenshot), keyEquivalent: ""))
+            menu.addItem(NSMenuItem(title: "Capture Region (⌘⇧5)", action: #selector(captureScreenshot), keyEquivalent: ""))
+            menu.addItem(NSMenuItem(title: "Capture Fullscreen", action: #selector(captureFullscreen), keyEquivalent: ""))
+            menu.addItem(NSMenuItem(title: "Capture Window", action: #selector(captureWindow), keyEquivalent: ""))
         } else {
             let permItem = NSMenuItem(title: "⚠️ Permissions Required", action: #selector(showPermissions), keyEquivalent: "")
             menu.addItem(permItem)
         }
-        
+
         menu.addItem(NSMenuItem.separator())
         
         // History section
@@ -81,6 +83,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, CaptureManagerDelegate {
                 let menuItem = NSMenuItem(title: "\(item.filename) (\(timeAgo))", action: #selector(showHistoryItem(_:)), keyEquivalent: "")
                 menuItem.representedObject = item
                 menuItem.toolTip = item.url
+                if let thumbnail = HistoryManager.shared.thumbnail(for: item) {
+                    menuItem.image = thumbnail
+                }
                 menu.addItem(menuItem)
             }
             
@@ -171,7 +176,23 @@ class AppDelegate: NSObject, NSApplicationDelegate, CaptureManagerDelegate {
         }
         captureManager?.startCapture()
     }
-    
+
+    @objc func captureFullscreen() {
+        guard PermissionsManager.shared.hasScreenRecordingPermission else {
+            showPermissions()
+            return
+        }
+        captureManager?.captureFullscreen()
+    }
+
+    @objc func captureWindow() {
+        guard PermissionsManager.shared.hasScreenRecordingPermission else {
+            showPermissions()
+            return
+        }
+        captureManager?.captureWindow()
+    }
+
     @objc func showHistoryItem(_ sender: NSMenuItem) {
         guard let item = sender.representedObject as? HistoryItem else { return }
         

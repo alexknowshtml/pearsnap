@@ -61,7 +61,7 @@ class ConfigManager {
     private func save(_ config: S3Config) {
         do {
             let encoder = JSONEncoder()
-            encoder.outputFormatting = .prettyPrinted
+            encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
             let data = try encoder.encode(config)
             try data.write(to: configURL)
         } catch {

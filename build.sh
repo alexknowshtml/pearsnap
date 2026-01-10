@@ -7,10 +7,11 @@ echo "Building Pearsnap..."
 swift build
 
 echo "Updating app bundle..."
+mkdir -p Pearsnap.app/Contents/MacOS
 cp .build/debug/Pearsnap Pearsnap.app/Contents/MacOS/Pearsnap
 
 echo "Signing app with Developer certificate..."
-codesign --force --deep --sign "Apple Development: Alex Hillman (6VCY6GJAPH)" Pearsnap.app
+codesign --force --deep --sign "98C42A0801C76BFD277B7CBA4B0E4374C6216DA7" Pearsnap.app
 
 echo "Deploying to /Applications..."
 pkill -f Pearsnap.app/Contents/MacOS/Pearsnap 2>/dev/null || true
