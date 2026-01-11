@@ -6,3 +6,4 @@ DerivedData/
 .swiftpm/
 Pearsnap.app/Contents/MacOS/Pearsnap
 sparkle_private_key
+Pearsnap.app/Contents/Frameworks/
