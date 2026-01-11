@@ -7,11 +7,13 @@ A lightweight macOS screenshot tool that captures, uploads, and shares in one fl
 - **Quick Capture**: Press ⌘⇧5 to select any area of your screen
 - **Instant Upload**: Automatically uploads to S3-compatible storage (DigitalOcean Spaces, AWS S3, etc.)
 - **Auto-Copy**: URL copied to clipboard immediately after upload
-- **Drag to Save**: Drag the preview to save the image anywhere
-- **Upload History**: Access recent uploads from the menu bar
-- **Launch at Login**: Optional auto-start
+- **Drag to Save**: Drag the preview to save the image anywhere (preview slides to corner while dragging)
+- **Redaction Tool**: Pixelate sensitive information before sharing
+- **Upload History**: Access recent uploads from the menu bar with navigation
 - **Color Picker**: Loupe magnifier shows pixel colors with hex codes
 - **Copy Hex**: Press ⌘C while hovering to copy the hex color to clipboard
+- **Cmd+Tab Support**: Preview window appears in app switcher
+- **Launch at Login**: Optional auto-start
 - **Auto-Updates**: Built-in Sparkle updater checks for new versions
 
 ## Keyboard Shortcuts
@@ -19,8 +21,19 @@ A lightweight macOS screenshot tool that captures, uploads, and shares in one fl
 | Shortcut | Action |
 |----------|--------|
 | ⌘⇧5 | Start capture |
-| ESC | Cancel capture / Close preview |
+| ESC | Cancel capture / Close preview / Exit redact mode |
 | ⌘C | Copy hex color under cursor (during capture) |
+| ← → | Navigate upload history (in preview) |
+
+## Preview Window
+
+After capturing, the preview window lets you:
+- **Drag** the image to save it anywhere (Finder, apps, desktop)
+- **Navigate** through recent uploads with arrow keys or buttons
+- **Redact** sensitive info by clicking the eye icon, drawing rectangles, then clicking ✓
+- **Cmd+Tab** back to the preview if you switch away
+
+The preview slides to the nearest corner while you're dragging, then returns when you drop.
 
 ## Installation
 
@@ -41,16 +54,10 @@ Download the latest release from the [Releases page](https://github.com/alexknow
 ./build.sh  # Builds, signs, and deploys to /Applications
 ```
 
-Or manually:
-
+For permissions to persist across rebuilds, sign with your Developer certificate:
 ```bash
-swift build
-cp .build/debug/Pearsnap Pearsnap.app/Contents/MacOS/Pearsnap
-mkdir -p Pearsnap.app/Contents/Frameworks
-cp -R .build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework Pearsnap.app/Contents/Frameworks/
-install_name_tool -add_rpath @executable_path/../Frameworks Pearsnap.app/Contents/MacOS/Pearsnap
-codesign --force --deep --sign - Pearsnap.app
-cp -R Pearsnap.app /Applications/
+# Edit build.sh and set SIGNING_IDENTITY to your certificate
+./build.sh
 ```
 
 ### Requirements
@@ -77,6 +84,11 @@ Pearsnap requires:
 - **Accessibility**: For global keyboard shortcut
 - **Screen Recording**: For capturing screenshots
 
+If permissions get stuck after a rebuild, click **Reset Permissions & Relaunch** in the setup window, or run:
+```bash
+./reset-permissions.sh
+```
+
 ## Releasing New Versions
 
 To release a new version:
@@ -94,18 +106,6 @@ This single command will:
 6. Commit and push everything
 
 Users with Pearsnap installed can then click **Check for Updates...** in the menu to get the new version.
-
-### Manual Release Steps
-
-If you need to release manually:
-
-1. Update `CFBundleShortVersionString` and `CFBundleVersion` in `Pearsnap.app/Contents/Info.plist`
-2. Run `./build.sh`
-3. Create zip: `zip -r Pearsnap-vX.X.X.zip Pearsnap.app`
-4. Sign: `~/.build/artifacts/sparkle/Sparkle/bin/sign_update Pearsnap-vX.X.X.zip -f ~/Developer/Pearsnap/sparkle_private_key`
-5. Create GitHub release and attach the zip
-6. Add new `<item>` to `docs/appcast.xml` with the signature
-7. Push to main
 
 ## Why "Pearsnap"?
 

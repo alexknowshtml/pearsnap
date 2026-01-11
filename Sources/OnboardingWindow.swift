@@ -5,8 +5,14 @@ struct OnboardingView: View {
     @State private var accessibilityGranted = PermissionsManager.shared.hasAccessibilityPermission
     @State private var screenRecordingGranted = PermissionsManager.shared.hasScreenRecordingPermission
     @State private var timer: Timer?
+    @State private var accessibilityAttempted = false
+    @State private var screenRecordingAttempted = false
+    @State private var showTroubleshooting = false
+    @State private var attemptStartTime: Date?
     
     var onComplete: () -> Void
+    
+    private let troubleshootingDelay: TimeInterval = 8.0
     
     var body: some View {
         VStack(spacing: 20) {
@@ -38,7 +44,9 @@ struct OnboardingView: View {
                     title: "Accessibility",
                     description: "For global keyboard shortcut (⌘⇧5)",
                     isGranted: accessibilityGranted,
-                    action: {
+                    onEnable: {
+                        accessibilityAttempted = true
+                        startTroubleshootingTimer()
                         PermissionsManager.shared.openAccessibilitySettings()
                     }
                 )
@@ -49,13 +57,48 @@ struct OnboardingView: View {
                     title: "Screen Recording",
                     description: "To capture screenshots",
                     isGranted: screenRecordingGranted,
-                    action: {
+                    onEnable: {
+                        screenRecordingAttempted = true
+                        startTroubleshootingTimer()
                         PermissionsManager.shared.requestScreenRecordingPermission()
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                             PermissionsManager.shared.openScreenRecordingSettings()
                         }
                     }
                 )
+                
+                // Troubleshooting section
+                if showTroubleshooting && (!accessibilityGranted || !screenRecordingGranted) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Divider()
+                        
+                        HStack(spacing: 6) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.orange)
+                            Text("Having trouble?")
+                                .fontWeight(.medium)
+                        }
+                        
+                        Text("If Pearsnap appears in System Settings but the checkbox won't stay enabled, click below to clear stale entries and restart.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        
+                        Button(action: {
+                            PermissionsManager.shared.resetAndRelaunch()
+                        }) {
+                            HStack {
+                                Image(systemName: "arrow.clockwise")
+                                Text("Reset Permissions & Relaunch")
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.orange)
+                        .controlSize(.regular)
+                    }
+                    .padding(.top, 8)
+                }
             }
             .padding(.horizontal, 24)
             
@@ -92,7 +135,7 @@ struct OnboardingView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 28)
         }
-        .frame(width: 380, height: 440)
+        .frame(width: 400, height: showTroubleshooting ? 560 : 460)
         .onAppear {
             startPolling()
         }
@@ -105,6 +148,22 @@ struct OnboardingView: View {
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             accessibilityGranted = PermissionsManager.shared.hasAccessibilityPermission
             screenRecordingGranted = PermissionsManager.shared.hasScreenRecordingPermission
+            
+            if let startTime = attemptStartTime,
+               Date().timeIntervalSince(startTime) > troubleshootingDelay {
+                if (accessibilityAttempted && !accessibilityGranted) ||
+                   (screenRecordingAttempted && !screenRecordingGranted) {
+                    withAnimation {
+                        showTroubleshooting = true
+                    }
+                }
+            }
+        }
+    }
+    
+    private func startTroubleshootingTimer() {
+        if attemptStartTime == nil {
+            attemptStartTime = Date()
         }
     }
 }
@@ -114,7 +173,7 @@ struct PermissionRow: View {
     let title: String
     let description: String
     let isGranted: Bool
-    let action: () -> Void
+    let onEnable: () -> Void
     
     var body: some View {
         HStack(spacing: 12) {
@@ -139,7 +198,7 @@ struct PermissionRow: View {
                     .font(.title2)
             } else {
                 Button("Enable") {
-                    action()
+                    onEnable()
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
@@ -161,7 +220,7 @@ class OnboardingWindowController {
         })
         
         window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 380, height: 440),
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 460),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false

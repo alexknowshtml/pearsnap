@@ -11,6 +11,7 @@ class CaptureManager: NSObject, SelectionOverlayDelegate {
     private var currentTempFile: String?
     private var captureScreen: NSScreen?
     private var selectionOverlays: [SelectionOverlay] = []
+    private var screenSnapshots: [NSScreen: CGImage] = [:]  // Pre-captured snapshots
     
     func startCapture() {
         cleanupPreview()
@@ -20,7 +21,6 @@ class CaptureManager: NSObject, SelectionOverlayDelegate {
     func captureFullscreen() {
         cleanupPreview()
 
-        // Get the screen with the mouse
         let mouseLocation = NSEvent.mouseLocation
         guard let screen = NSScreen.screens.first(where: { NSMouseInRect(mouseLocation, $0.frame, false) }) ?? NSScreen.main else {
             return
@@ -28,16 +28,14 @@ class CaptureManager: NSObject, SelectionOverlayDelegate {
 
         captureScreen = screen
 
-        // Capture the entire screen
         let screenFrame = screen.frame
         let cgRect = CGRect(
             x: screenFrame.origin.x,
-            y: 0,  // CGWindowListCreateImage uses top-left origin
+            y: 0,
             width: screenFrame.width,
             height: screenFrame.height
         )
 
-        // Small delay to let menu close
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
             guard let cgImage = CGWindowListCreateImage(
                 cgRect,
@@ -59,12 +57,10 @@ class CaptureManager: NSObject, SelectionOverlayDelegate {
     func captureWindow() {
         cleanupPreview()
 
-        // Get list of windows
         guard let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else {
             return
         }
 
-        // Filter to windows that have a name and reasonable size
         let windows = windowList.filter { info in
             guard let bounds = info[kCGWindowBounds as String] as? [String: CGFloat],
                   let width = bounds["Width"], let height = bounds["Height"],
@@ -77,7 +73,6 @@ class CaptureManager: NSObject, SelectionOverlayDelegate {
 
         guard !windows.isEmpty else { return }
 
-        // Use the frontmost window (first in list after current app)
         let targetWindow = windows.first { info in
             let ownerName = info[kCGWindowOwnerName as String] as? String
             return ownerName != "Pearsnap"
@@ -93,7 +88,6 @@ class CaptureManager: NSObject, SelectionOverlayDelegate {
 
         let bounds = CGRect(x: x, y: y, width: width, height: height)
 
-        // Small delay to let menu close
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
             guard let cgImage = CGWindowListCreateImage(
                 bounds,
@@ -113,77 +107,136 @@ class CaptureManager: NSObject, SelectionOverlayDelegate {
     }
 
     private func showSelectionOverlay() {
+        // Close any existing overlays
+        selectionOverlays.forEach { $0.close() }
+        selectionOverlays.removeAll()
+        screenSnapshots.removeAll()
+        
+        // CRITICAL: Capture all screen snapshots BEFORE creating any overlays
+        for screen in NSScreen.screens {
+            if let snapshot = captureScreenSnapshot(for: screen) {
+                screenSnapshots[screen] = snapshot
+            }
+        }
+        
         // Find screen with mouse
         let mouseLocation = NSEvent.mouseLocation
         let mouseScreen = NSScreen.screens.first { NSMouseInRect(mouseLocation, $0.frame, false) } ?? NSScreen.main
         
-        // Close any existing overlays
-        selectionOverlays.forEach { $0.close() }
-        selectionOverlays.removeAll()
-        
-        // Create overlay for each screen
-        for screen in NSScreen.screens {
-            let overlay = SelectionOverlay(screen: screen)
-            overlay.selectionDelegate = self
-            
-            // Only make the overlay with the mouse the key window
-            if screen == mouseScreen {
-                overlay.makeKeyAndOrderFront(nil)
-            } else {
-                overlay.orderFront(nil)
-            }
-            selectionOverlays.append(overlay)
-        }
-        
+        // Activate app FIRST, before creating windows
         NSApp.activate(ignoringOtherApps: true)
         
-        // Ensure the correct overlay is key after activation
-        if let keyOverlay = selectionOverlays.first(where: { $0.screen == mouseScreen }) {
-            keyOverlay.makeKey()
+        // Small delay to ensure activation completes
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            guard let self = self else { return }
+            
+            // Create overlay for each screen with pre-captured snapshot
+            for screen in NSScreen.screens {
+                let snapshot = self.screenSnapshots[screen]
+                let overlay = SelectionOverlay(screen: screen, snapshot: snapshot)
+                overlay.selectionDelegate = self
+                
+                // Show all overlays
+                overlay.orderFront(nil)
+                self.selectionOverlays.append(overlay)
+            }
+            
+            // Make the overlay with the mouse the key window AFTER all are created
+            if let keyOverlay = self.selectionOverlays.first(where: { $0.overlayScreen == mouseScreen }) {
+                keyOverlay.makeKeyAndOrderFront(nil)
+            }
         }
+    }
+    
+    private func captureScreenSnapshot(for screen: NSScreen) -> CGImage? {
+        let screenRect = CGRect(
+            x: screen.frame.origin.x,
+            y: NSScreen.screens[0].frame.height - screen.frame.origin.y - screen.frame.height,
+            width: screen.frame.width,
+            height: screen.frame.height
+        )
+        
+        return CGWindowListCreateImage(
+            screenRect,
+            .optionOnScreenOnly,
+            kCGNullWindowID,
+            .bestResolution
+        )
     }
     
     // MARK: - SelectionOverlayDelegate
     
     func selectionOverlay(_ overlay: SelectionOverlay, didSelectRegion rect: CGRect, screen: NSScreen) {
+        // Get the pre-captured snapshot for this screen
+        let snapshot = screenSnapshots[screen]
+        
         // Close all overlays
         selectionOverlays.forEach { $0.close() }
         selectionOverlays.removeAll()
         
         captureScreen = screen
-        captureScreenshot(rect: rect, screen: screen)
+        
+        // Use the pre-captured snapshot - no timing issues!
+        captureScreenshot(rect: rect, screen: screen, snapshot: snapshot)
     }
     
     func selectionOverlayCancelled(_ overlay: SelectionOverlay) {
         selectionOverlays.forEach { $0.close() }
         selectionOverlays.removeAll()
+        screenSnapshots.removeAll()
     }
     
     // MARK: - Screenshot Capture
     
-    private func captureScreenshot(rect: CGRect, screen: NSScreen) {
-        // Convert to screen coordinates for CGWindowListCreateImage
-        let cgRect = CGRect(
-            x: rect.origin.x,
-            y: NSScreen.screens[0].frame.height - rect.origin.y - rect.height,
-            width: rect.width,
-            height: rect.height
-        )
+    private func captureScreenshot(rect: CGRect, screen: NSScreen, snapshot: CGImage?) {
+        let cgImage: CGImage?
         
-        guard let cgImage = CGWindowListCreateImage(
-            cgRect,
-            .optionOnScreenBelowWindow,
-            kCGNullWindowID,
-            .bestResolution
-        ) else {
+        if let snapshot = snapshot {
+            // Use the pre-captured snapshot and crop to selection
+            let scale = CGFloat(snapshot.width) / screen.frame.width
+            
+            // Convert selection rect to snapshot coordinates
+            let localX = rect.origin.x - screen.frame.origin.x
+            let localY = rect.origin.y - screen.frame.origin.y
+            
+            let cropRect = CGRect(
+                x: localX * scale,
+                y: (screen.frame.height - localY - rect.height) * scale,
+                width: rect.width * scale,
+                height: rect.height * scale
+            )
+            
+            cgImage = snapshot.cropping(to: cropRect)
+        } else {
+            // Fallback: capture fresh (shouldn't happen normally)
+            let cgRect = CGRect(
+                x: rect.origin.x,
+                y: NSScreen.screens[0].frame.height - rect.origin.y - rect.height,
+                width: rect.width,
+                height: rect.height
+            )
+            
+            cgImage = CGWindowListCreateImage(
+                cgRect,
+                .optionOnScreenOnly,
+                kCGNullWindowID,
+                .bestResolution
+            )
+        }
+        
+        guard let finalImage = cgImage else {
             print("Failed to capture screenshot")
+            screenSnapshots.removeAll()
             return
         }
         
+        // Clean up snapshots
+        screenSnapshots.removeAll()
+        
         // Play capture sound
-        AudioServicesPlaySystemSound(1108)  // Screen capture sound
+        AudioServicesPlaySystemSound(1108)
 
-        let image = NSImage(cgImage: cgImage, size: rect.size)
+        let image = NSImage(cgImage: finalImage, size: rect.size)
         showPreviewAndUpload(image: image)
     }
     

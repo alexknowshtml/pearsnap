@@ -15,20 +15,19 @@ class SelectionOverlay: NSWindow {
     private var trackingArea: NSTrackingArea?
     var overlayScreen: NSScreen?
     private var loupeView: LoupeView!
-    private var screenSnapshot: CGImage?
+    var screenSnapshot: CGImage?  // Now set externally by CaptureManager
     private var currentHexColor: String = "#FFFFFF"
     
-    init(screen: NSScreen) {
+    init(screen: NSScreen, snapshot: CGImage?) {
         self.overlayScreen = screen
+        self.screenSnapshot = snapshot
+        
         super.init(
             contentRect: screen.frame,
             styleMask: [.borderless],
             backing: .buffered,
             defer: false
         )
-        
-        // Capture screen BEFORE showing overlay
-        captureScreenSnapshot()
         
         self.level = .screenSaver
         self.backgroundColor = NSColor.black.withAlphaComponent(0.3)
@@ -47,27 +46,6 @@ class SelectionOverlay: NSWindow {
         setupTracking()
         
         NSCursor.crosshair.push()
-        
-        // Make window key immediately to receive events
-        makeKeyAndOrderFront(nil)
-    }
-    
-    private func captureScreenSnapshot() {
-        guard let screen = overlayScreen else { return }
-        
-        let screenRect = CGRect(
-            x: screen.frame.origin.x,
-            y: NSScreen.screens[0].frame.height - screen.frame.origin.y - screen.frame.height,
-            width: screen.frame.width,
-            height: screen.frame.height
-        )
-        
-        screenSnapshot = CGWindowListCreateImage(
-            screenRect,
-            .optionOnScreenBelowWindow,
-            kCGNullWindowID,
-            .bestResolution
-        )
     }
     
     private func setupLabels() {
@@ -128,11 +106,9 @@ class SelectionOverlay: NSWindow {
     }
     
     private func copyColorToClipboard() {
-        // Use our stored hex value
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(currentHexColor, forType: .string)
         
-        // Close overlay after copy
         NSCursor.pop()
         close()
         selectionDelegate?.selectionOverlayCancelled(self)
