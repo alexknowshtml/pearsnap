@@ -301,8 +301,8 @@ class PreviewWindow: NSWindow {
                 .intersection(CGRect(x: 0, y: 0, width: imageWidth, height: imageHeight))
             guard redactRect.width > 0, redactRect.height > 0 else { continue }
             
-            // Big chunky blocks - about 8 blocks across
-            let blockSize = Int(max(redactRect.width, redactRect.height) / 8)
+            // Scale block size to redaction area: ~1% of the longer dimension, clamped to 4–12px
+            let blockSize = min(12, max(4, Int(max(redactRect.width, redactRect.height) / 100)))
             guard blockSize >= 2 else { continue }
             
             let startX = Int(redactRect.minX)
