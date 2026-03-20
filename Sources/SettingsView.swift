@@ -39,9 +39,12 @@ struct SettingsView: View {
                                 setLaunchAtLogin(newValue)
                             }
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Redaction Strength")
+                            Text("Default Redaction Strength")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
+                            Text("Right-click the redact button to change per-capture")
+                                .font(.caption2)
+                                .foregroundColor(.gray)
                             HStack {
                                 Text("Fine")
                                     .font(.caption2)
