@@ -301,8 +301,12 @@ class PreviewWindow: NSWindow {
                 .intersection(CGRect(x: 0, y: 0, width: imageWidth, height: imageHeight))
             guard redactRect.width > 0, redactRect.height > 0 else { continue }
             
-            // Scale block size to redaction area: ~1% of the longer dimension, clamped to 4–12px
-            let blockSize = min(12, max(4, Int(max(redactRect.width, redactRect.height) / 100)))
+            // Scale block size to redaction area, adjusted by user's redaction level (1=fine, 5=coarse)
+            let level = CGFloat(min(5, max(1, UserDefaults.standard.integer(forKey: "redactionLevel"))))
+            let divisor = 300.0 / pow(2, level)  // level 1→150, 3→38 (default), 5→9
+            let maxBlock = Int(4 * pow(2, level))  // level 1→8px, 3→32px, 5→128px
+            let minBlock = Int(2 * pow(2, level))  // level 1→4px, 3→16px, 5→64px
+            let blockSize = min(maxBlock, max(minBlock, Int(max(redactRect.width, redactRect.height) / divisor)))
             guard blockSize >= 2 else { continue }
             
             let startX = Int(redactRect.minX)

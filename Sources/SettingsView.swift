@@ -10,6 +10,7 @@ struct SettingsView: View {
     @State private var publicURLBase: String = ""
     @State private var showSaveConfirmation = false
     @State private var launchAtLogin: Bool = false
+    @State private var redactionLevel: Double = 3
     
     var body: some View {
         VStack(spacing: 0) {
@@ -37,6 +38,23 @@ struct SettingsView: View {
                             .onChange(of: launchAtLogin) { newValue in
                                 setLaunchAtLogin(newValue)
                             }
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Redaction Strength")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            HStack {
+                                Text("Fine")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                Slider(value: $redactionLevel, in: 1...5, step: 1)
+                                    .onChange(of: redactionLevel) { newValue in
+                                        UserDefaults.standard.set(Int(newValue), forKey: "redactionLevel")
+                                    }
+                                Text("Coarse")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
                     }
                     
                     // S3 Configuration section
@@ -86,6 +104,7 @@ struct SettingsView: View {
         .onAppear {
             loadConfig()
             loadLaunchAtLogin()
+            redactionLevel = Double(UserDefaults.standard.integer(forKey: "redactionLevel"))
         }
     }
     
