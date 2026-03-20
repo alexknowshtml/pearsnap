@@ -2,6 +2,7 @@ import AppKit
 
 class PreviewWindow: NSWindow {
     var onClose: (() -> Void)?
+    var onRedact: ((NSImage) -> Void)?
     private var image: NSImage
     private var statusLabel: NSTextField!
     private var successLabel: NSTextField!
@@ -347,13 +348,8 @@ class PreviewWindow: NSWindow {
         
         self.image = finalImage
         imageView.image = finalImage
-        
-        successLabel.stringValue = "✓ Redacted"
-        successLabel.textColor = NSColor.systemRed
-        successLabel.alphaValue = 1
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-            NSAnimationContext.runAnimationGroup { ctx in ctx.duration = 0.3; self?.successLabel.animator().alphaValue = 0 }
-        }
+
+        onRedact?(finalImage)
     }
     
     override func close() {

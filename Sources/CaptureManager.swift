@@ -268,10 +268,15 @@ class CaptureManager: NSObject, SelectionOverlayDelegate {
                 self?.currentTempFile = nil
             }
         }
-        
+
+        preview.onRedact = { [weak self] redactedImage in
+            self?.previewWindow?.showUploading()
+            self?.uploadImage(redactedImage)
+        }
+
         preview.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        
+
         preview.showUploading()
         uploadImage(image)
     }
