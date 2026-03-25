@@ -88,7 +88,7 @@ class PreviewWindow: NSWindow {
             currentURL = nil
             updateNavigationState()
             successLabel.alphaValue = 0
-            statusLabel.stringValue = "Drag to save · Press ESC to close"
+            statusLabel.stringValue = "⌘C copy · Drag to save · ESC close"
         } else {
             loadHistoryItem(at: currentHistoryIndex)
         }
@@ -110,7 +110,7 @@ class PreviewWindow: NSWindow {
                 self.imageView.alphaValue = 1
                 if let data = data, let loadedImage = NSImage(data: data) {
                     self.imageView.image = loadedImage
-                    self.statusLabel.stringValue = "← → navigate · Drag to save · ESC to close"
+                    self.statusLabel.stringValue = "← → navigate · ⌘C copy · Drag to save · ESC close"
                 } else {
                     self.successLabel.stringValue = "Failed to load"
                     self.successLabel.textColor = .systemRed
@@ -210,7 +210,7 @@ class PreviewWindow: NSWindow {
         statusLabel.textColor = .tertiaryLabelColor
         statusLabel.font = NSFont.systemFont(ofSize: 11)
         statusLabel.alignment = .center
-        statusLabel.stringValue = "Drag to save · Press ESC to close"
+        statusLabel.stringValue = "⌘C copy · Drag to save · ESC close"
         statusBar.addSubview(statusLabel)
 
         let imageHeight = windowSize.height - statusBarHeight
@@ -265,7 +265,7 @@ class PreviewWindow: NSWindow {
         blurButton.contentTintColor = .secondaryLabelColor
         blurButton.image = NSImage(systemSymbolName: "eye.slash", accessibilityDescription: "Redact")
         blurButton.toolTip = "Redact sensitive areas"
-        statusLabel.stringValue = "Drag to save · Press ESC to close"
+        statusLabel.stringValue = "⌘C copy · Drag to save · ESC close"
         imageView.isDragEnabled = true
         self.isMovableByWindowBackground = true
         blurOverlay?.removeFromSuperview()
@@ -384,9 +384,23 @@ class PreviewWindow: NSWindow {
     override func keyDown(with event: NSEvent) {
         switch event.keyCode {
         case 53: if isBlurMode { exitBlurMode() } else { close() }
+        case 8 where event.modifierFlags.contains(.command): copyImageToClipboard()
         case 123: if !isBlurMode { navigatePrev() }
         case 124: if !isBlurMode { navigateNext() }
         default: super.keyDown(with: event)
+        }
+    }
+
+    private func copyImageToClipboard() {
+        guard let img = imageView.image,
+              let tiffData = img.tiffRepresentation else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setData(tiffData, forType: .tiff)
+        successLabel.stringValue = "✓ Image copied"
+        successLabel.textColor = NSColor(red: 0.18, green: 0.55, blue: 0.34, alpha: 1.0)
+        successLabel.alphaValue = 1
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            NSAnimationContext.runAnimationGroup { ctx in ctx.duration = 0.3; self?.successLabel.animator().alphaValue = 0 }
         }
     }
     
