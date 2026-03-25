@@ -30,8 +30,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, CaptureManagerDelegate {
     }
     
     func applicationDidFinishLaunching(_ notification: Notification) {
+        UserDefaults.standard.register(defaults: ["redactionLevel": 3])
         NSApp.setActivationPolicy(.accessory)
-        
+
         setupMenuBar()
         captureManager = CaptureManager()
         captureManager?.delegate = self

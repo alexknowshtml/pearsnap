@@ -22,10 +22,12 @@ class PreviewWindow: NSWindow {
     private var preDragAlpha: CGFloat = 1.0
     private var isBlurMode = false
     private var blurOverlay: BlurOverlayView?
+    private var redactionLevel: Int
 
     init(image: NSImage, screen: NSScreen? = nil, url: String? = nil) {
         self.image = image
         self.currentURL = url
+        self.redactionLevel = min(5, max(1, UserDefaults.standard.integer(forKey: "redactionLevel")))
         let maxSize: CGFloat = 600
         let scale = min(maxSize / image.size.width, maxSize / image.size.height, 1.0)
         let windowSize = NSSize(
@@ -169,7 +171,17 @@ class PreviewWindow: NSWindow {
         blurButton.contentTintColor = .secondaryLabelColor
         blurButton.target = self
         blurButton.action = #selector(toggleBlurMode)
-        blurButton.toolTip = "Redact sensitive areas"
+        blurButton.toolTip = "Redact sensitive areas · Right-click for strength"
+        let levelMenu = NSMenu()
+        for i in 1...5 {
+            let label = ["", "Fine (4px)", "Light (8px)", "Medium (16px)", "Heavy (32px)", "Coarse (64px)"][i]
+            let item = NSMenuItem(title: label, action: #selector(setRedactionLevel(_:)), keyEquivalent: "")
+            item.tag = i
+            item.target = self
+            if i == redactionLevel { item.state = .on }
+            levelMenu.addItem(item)
+        }
+        blurButton.menu = levelMenu
         statusBar.addSubview(blurButton)
 
         historyCountLabel = NSTextField(frame: NSRect(x: buttonSize + 12, y: 26, width: windowSize.width - (buttonSize + 12) * 2 - 40, height: 16))
@@ -225,6 +237,13 @@ class PreviewWindow: NSWindow {
     @objc private func toggleBlurMode() {
         isBlurMode.toggle()
         if isBlurMode { enterBlurMode() } else { exitBlurMode() }
+    }
+
+    @objc private func setRedactionLevel(_ sender: NSMenuItem) {
+        redactionLevel = sender.tag
+        for item in blurButton.menu?.items ?? [] {
+            item.state = item.tag == redactionLevel ? .on : .off
+        }
     }
     
     private func enterBlurMode() {
@@ -302,8 +321,8 @@ class PreviewWindow: NSWindow {
                 .intersection(CGRect(x: 0, y: 0, width: imageWidth, height: imageHeight))
             guard redactRect.width > 0, redactRect.height > 0 else { continue }
             
-            // Big chunky blocks - about 8 blocks across
-            let blockSize = Int(max(redactRect.width, redactRect.height) / 8)
+            // Fixed block size per level — consistent regardless of selection size
+            let blockSize = [0, 4, 8, 16, 32, 64][redactionLevel]
             guard blockSize >= 2 else { continue }
             
             let startX = Int(redactRect.minX)
