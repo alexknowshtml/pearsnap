@@ -281,6 +281,39 @@ class CaptureManager: NSObject, SelectionOverlayDelegate {
         uploadImage(image)
     }
     
+    private static let pngquantPath: String? = {
+        ["/opt/homebrew/bin/pngquant", "/usr/local/bin/pngquant"]
+            .first { FileManager.default.fileExists(atPath: $0) }
+    }()
+
+    private func optimizePNG(_ data: Data) -> Data {
+        guard let path = Self.pngquantPath else { return data }
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: path)
+        process.arguments = ["--quality=65-90", "--speed=1", "-"]
+        let inputPipe = Pipe(), outputPipe = Pipe()
+        process.standardInput = inputPipe
+        process.standardOutput = outputPipe
+        process.standardError = FileHandle.nullDevice
+        do {
+            try process.run()
+            // Write input on a background thread to avoid pipe deadlock
+            DispatchQueue.global().async {
+                inputPipe.fileHandleForWriting.write(data)
+                inputPipe.fileHandleForWriting.closeFile()
+            }
+            let optimized = outputPipe.fileHandleForReading.readDataToEndOfFile()
+            process.waitUntilExit()
+            if process.terminationStatus == 0 && !optimized.isEmpty {
+                print("[PNG] Optimized: \(data.count / 1024)K → \(optimized.count / 1024)K")
+                return optimized
+            }
+        } catch {
+            print("[PNG] pngquant failed: \(error)")
+        }
+        return data
+    }
+
     private func uploadImage(_ image: NSImage) {
         guard let tiffData = image.tiffRepresentation,
               let bitmap = NSBitmapImageRep(data: tiffData),
@@ -289,8 +322,10 @@ class CaptureManager: NSObject, SelectionOverlayDelegate {
             previewWindow?.showError("Failed to process image")
             return
         }
-        
-        S3Uploader.shared.upload(data: pngData) { [weak self] result in
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let uploadData = self?.optimizePNG(pngData) ?? pngData
+            S3Uploader.shared.upload(data: uploadData) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let url):
@@ -307,6 +342,7 @@ class CaptureManager: NSObject, SelectionOverlayDelegate {
                     self?.previewWindow?.showError(error.localizedDescription)
                 }
             }
+        }
         }
     }
 }
