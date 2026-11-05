@@ -17,7 +17,7 @@ struct PearsnapApp: App {
 class AppDelegate: NSObject, NSApplicationDelegate, CaptureManagerDelegate {
     var statusItem: NSStatusItem?
     var captureManager: CaptureManager?
-    var eventTap: CFMachPort?
+    var hotKeyRef: EventHotKeyRef?
     var settingsWindow: NSWindow?
     var onboardingController: OnboardingWindowController?
     var permissionCheckTimer: Timer?
@@ -118,7 +118,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, CaptureManagerDelegate {
     func startPermissionMonitoring() {
         permissionCheckTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
             let hasAccess = PermissionsManager.shared.hasAccessibilityPermission
-            if hasAccess && self?.eventTap == nil {
+            if hasAccess && self?.hotKeyRef == nil {
                 self?.setupHotkeyIfAllowed()
                 self?.updateMenu()
             }
@@ -126,58 +126,34 @@ class AppDelegate: NSObject, NSApplicationDelegate, CaptureManagerDelegate {
     }
     
     func setupHotkeyIfAllowed() {
-        guard PermissionsManager.shared.hasAccessibilityPermission else {
-            print("Accessibility permission not granted, skipping hotkey setup")
+        guard hotKeyRef == nil else {
+            print("Hotkey already registered")
             return
         }
-        
-        guard eventTap == nil else {
-            print("Event tap already set up")
+
+        // Carbon hotkey instead of a CGEventTap: keyDown taps go silent while
+        // any process holds Secure Input (macOS can leave loginwindow holding
+        // it after wake), but registered hotkeys still fire.
+        var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
+        InstallEventHandler(GetApplicationEventTarget(), { _, _, userData in
+            guard let userData = userData else { return noErr }
+            let appDelegate = Unmanaged<AppDelegate>.fromOpaque(userData).takeUnretainedValue()
+            DispatchQueue.main.async { appDelegate.toggleCapture() }
+            return noErr
+        }, 1, &eventType, Unmanaged.passUnretained(self).toOpaque(), nil)
+
+        let hotKeyID = EventHotKeyID(signature: OSType(0x5052534E), id: 1) // "PRSN"
+        let status = RegisterEventHotKey(UInt32(kVK_ANSI_5), UInt32(cmdKey | shiftKey), hotKeyID, GetApplicationEventTarget(), 0, &hotKeyRef)
+        if status != noErr {
+            print("Failed to register hotkey: \(status)")
+            hotKeyRef = nil
             return
         }
-        
-        let eventMask = (1 << CGEventType.keyDown.rawValue)
-        
-        guard let tap = CGEvent.tapCreate(
-            tap: .cgSessionEventTap,
-            place: .headInsertEventTap,
-            options: .defaultTap,
-            eventsOfInterest: CGEventMask(eventMask),
-            callback: { proxy, type, event, refcon in
-                let appDelegate = Unmanaged<AppDelegate>.fromOpaque(refcon!).takeUnretainedValue()
-                return appDelegate.handleKeyEvent(proxy: proxy, type: type, event: event)
-            },
-            userInfo: Unmanaged.passUnretained(self).toOpaque()
-        ) else {
-            print("Failed to create event tap")
-            return
-        }
-        
-        print("Event tap created successfully")
-        eventTap = tap
-        let runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
-        CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
-        CGEvent.tapEnable(tap: tap, enable: true)
-        
+
+        print("Hotkey registered (cmd+shift+5)")
         updateMenu()
     }
-    
-    func handleKeyEvent(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
-        if type == .keyDown {
-            let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
-            let flags = event.flags
-            
-            let commandShift: CGEventFlags = [.maskCommand, .maskShift]
-            if keyCode == 23 && flags.contains(commandShift) {
-                DispatchQueue.main.async {
-                    self.toggleCapture()
-                }
-                return nil
-            }
-        }
-        return Unmanaged.passRetained(event)
-    }
-    
+
     @objc func captureScreenshot() {
         guard PermissionsManager.shared.hasScreenRecordingPermission else {
             showPermissions()
