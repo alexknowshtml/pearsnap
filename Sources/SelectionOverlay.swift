@@ -369,6 +369,11 @@ class LoupeView: NSView {
 
 class SelectionContentView: NSView {
     weak var overlay: SelectionOverlay?
+
+    // The Carbon hotkey (ffb7ca2) doesn't activate PearSnap the way the old event
+    // tap did, so the overlay isn't active yet. Without this, the first click only
+    // activates the app and the drag needs a second click.
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     var selectionRect: CGRect?
     var mouseLocation: NSPoint?
     
